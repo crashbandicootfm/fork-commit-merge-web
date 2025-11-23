@@ -1,0 +1,29 @@
+name: Trivy Security Scan
+
+on:
+  push:
+    branches: [ devops ]
+  pull_request:
+    branches: [ main, devops ]
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy FS scan
+        uses: aquasecurity/trivy-action@v0.12.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+          ignore-unfixed: true
+          vuln-type: "library,config"
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results.sarif"
