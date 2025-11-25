@@ -7,22 +7,31 @@ on:
 jobs:
   trivy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Trivy FS scan (container)
+      - name: Install Trivy (native, no Docker)
         run: |
-          docker run --rm \
-            -v "${{ github.workspace }}":/project \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:latest fs /project \
-              --format sarif \
-              --output /project/trivy-results.sarif \
-              --ignore-unfixed \
-              --vuln-type library,config
+          set -euo pipefail
+          # Use official install script to install the Trivy binary into /usr/local/bin
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+          trivy --version
 
-      - name: Upload Trivy SARIF
+      - name: Run Trivy FS scan (repo filesystem)
+        env:
+          TRIVY_CACHE_DIR: ${{ runner.temp }}/trivy-cache
+        run: |
+          set -euo pipefail
+          # Run filesystem scan on repository root, produce SARIF for Code Scanning
+          trivy fs . \
+            --format sarif \
+            --output trivy-results.sarif \
+            --ignore-unfixed \
+            --vuln-type library,config
+
+      - name: Upload Trivy scan results (SARIF)
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
