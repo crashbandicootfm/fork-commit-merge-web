@@ -7,25 +7,22 @@ on:
 jobs:
   trivy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Trivy FS scan
-        uses: aquasecurity/trivy-action@v0.2.4
-        with:
-          # For filesystem scans use scan-type: fs and provide scan-path.
-          scan-type: fs
-          scan-path: .
-          # Produce SARIF output so GitHub code scanning can ingest it.
-          format: sarif
-          output: trivy-results.sarif
-          # Additional options - use the action inputs (or pass via args).
-          ignore-unfixed: true
-          vuln-type: library,config
+      - name: Run Trivy FS scan (container)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}":/project \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest fs /project \
+              --format sarif \
+              --output /project/trivy-results.sarif \
+              --ignore-unfixed \
+              --vuln-type library,config
 
-      - name: Upload Trivy scan results
+      - name: Upload Trivy SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
