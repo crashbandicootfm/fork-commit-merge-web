@@ -15,7 +15,6 @@ jobs:
       - name: Install Trivy (native, no Docker)
         run: |
           set -euo pipefail
-          # Use official install script to install the Trivy binary into /usr/local/bin
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
           trivy --version
 
@@ -24,12 +23,13 @@ jobs:
           TRIVY_CACHE_DIR: ${{ runner.temp }}/trivy-cache
         run: |
           set -euo pipefail
-          # Run filesystem scan on repository root, produce SARIF for Code Scanning
+          # Scan filesystem for library vulnerabilities + config checks, output SARIF for Code Scanning
           trivy fs . \
             --format sarif \
             --output trivy-results.sarif \
             --ignore-unfixed \
-            --vuln-type library,config
+            --security-checks vuln,config \
+            --pkg-types library
 
       - name: Upload Trivy scan results (SARIF)
         uses: github/codeql-action/upload-sarif@v3
